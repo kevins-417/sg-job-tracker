@@ -1,0 +1,37 @@
+# Render.com blueprint — one managed Postgres + one web service (API + frontend).
+# Deploy: push this repo to GitHub, then in Render choose "New > Blueprint" and
+# point it at the repo. Render reads this file and provisions everything.
+#
+# After the first deploy, run the migration + seed once from the service Shell:
+#   node server/dist/db/migrate.js && node server/dist/db/seed.js
+
+databases:
+  - name: sgjt-db
+    databaseName: sgjt
+    user: sgjt
+    plan: free
+
+services:
+  - type: web
+    name: sgjt
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: node server/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sgjt-db
+          property: connectionString
+      - key: PGSSL
+        value: "true"
+      - key: PORT
+        value: "4000"
+      # The frontend is served from this same service, so same-origin requests
+      # need no special CORS origin. Set this to your custom domain if you add one.
+      - key: CORS_ORIGIN
+        value: "*"
+      # Frontend talks to the same origin, so the API base stays empty.
+      - key: VITE_API_BASE
+        value: ""

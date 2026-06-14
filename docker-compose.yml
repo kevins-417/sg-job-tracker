@@ -1,0 +1,54 @@
+# Run the whole stack locally with one command:
+#
+#   docker compose up --build
+#
+# This starts Postgres, runs the migration + seed once, then launches the app
+# on http://localhost:4000 (API + frontend from the same service).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sgjt
+      POSTGRES_PASSWORD: sgjt
+      POSTGRES_DB: sgjt
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgjt -d sgjt"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot container: waits for the DB, applies schema, seeds sample data,
+  # then exits. The app service waits for this to finish.
+  migrate:
+    build: .
+    command: sh -c "node server/dist/db/migrate.js && node server/dist/db/seed.js"
+    environment:
+      DATABASE_URL: postgresql://sgjt:sgjt@db:5432/sgjt
+      PGSSL: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://sgjt:sgjt@db:5432/sgjt
+      PGSSL: "false"
+      PORT: "4000"
+      CORS_ORIGIN: http://localhost:4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

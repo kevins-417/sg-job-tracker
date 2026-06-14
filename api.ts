@@ -1,0 +1,54 @@
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.3); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.sgjt-nav:hover { background: rgba(128, 128, 128, 0.08) !important; }
+.sgjt-primary:hover { filter: brightness(1.06); }
+.sgjt-icon:hover { background: rgba(128, 128, 128, 0.12) !important; }
+.sgjt-row:hover, .sgjt-trow:hover { background: rgba(128, 128, 128, 0.06) !important; }
+.sgjt-kcard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.sgjt-input:focus {
+  border-color: #0d9488 !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+@keyframes sgjt-slide {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes sgjt-pop {
+  from { transform: translate(-50%, -48%) scale(0.97); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@media (max-width: 860px) {
+  .sgjt-aside { display: none; }
+  .sgjt-2col { grid-template-columns: 1fr !important; }
+}
+
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
