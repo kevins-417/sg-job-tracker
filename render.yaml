@@ -3,7 +3,7 @@
 # point it at the repo. Render reads this file and provisions everything.
 #
 # After the first deploy, run the migration + seed once from the service Shell:
-#   node server/dist/db/migrate.js && node server/dist/db/seed.js
+#   startCommand: node server/dist/db/migrate.js && node server/dist/db/seed.js && node server/dist/index.js
 
 databases:
   - name: sgjt-db
