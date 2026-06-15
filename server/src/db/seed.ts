@@ -134,13 +134,21 @@ async function seed() {
   console.log("[seed] inserting auto-apply rule (disabled example)…");
   await query(
     `INSERT INTO auto_apply_rules
-      (id, label, enabled, keywords, industries, portals, min_salary, resume_id, mode, require_review)
-     VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8,$9,$10)`,
+      (id, label, enabled, keywords, industries, portals, min_salary, resume_id,
+       mode, require_review, titles, skills, locations, arrangements,
+       min_experience, cover_template)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8,$9,$10,
+             $11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16)`,
     [
       uid(), "Senior PM roles (review first)", false, "product manager, product owner",
-      JSON.stringify(["Technology", "Finance & Banking"]),
+      JSON.stringify(["Technology", "Finance & Banking", "Government"]),
       JSON.stringify(["LinkedIn Jobs", "MyCareersFuture"]),
       7000, "r1", "draft", true,
+      JSON.stringify(["Product Manager", "Product Owner"]),
+      JSON.stringify(["product strategy", "roadmap", "stakeholder management", "agile"]),
+      JSON.stringify(["One-North", "Marina Bay", "Pasir Panjang"]),
+      JSON.stringify(["hybrid", "remote"]),
+      5, "Warm but concise; lead with product outcomes and metrics.",
     ]
   );
 

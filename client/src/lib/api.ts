@@ -44,7 +44,7 @@ export const api = {
   // Resumes
   listResumes: () => http<Resume[]>("/resumes"),
 
-  // Auto-apply (Phase 2 preview)
+  // Auto-apply (prepare-and-review queue)
   listRules: () => http<AutoApplyRule[]>("/auto-apply/rules"),
   upsertRule: (body: AutoApplyRule) =>
     http<AutoApplyRule>("/auto-apply/rules", { method: "POST", body: JSON.stringify(body) }),
@@ -52,6 +52,13 @@ export const api = {
     http<void>(`/auto-apply/rules/${id}`, { method: "DELETE" }),
   runRule: (id: string) =>
     http<AutoApplyRunResult>(`/auto-apply/rules/${id}/run`, { method: "POST" }),
+  listQueue: () => http<AutoApplyAttempt[]>("/auto-apply/queue"),
   listAttempts: (ruleId?: string) =>
     http<AutoApplyAttempt[]>(`/auto-apply/attempts${ruleId ? `?ruleId=${ruleId}` : ""}`),
+  updateCover: (id: string, coverLetter: string) =>
+    http<AutoApplyAttempt>(`/auto-apply/attempts/${id}/cover`, { method: "PUT", body: JSON.stringify({ coverLetter }) }),
+  submitAttempt: (id: string) =>
+    http<{ applicationId: string }>(`/auto-apply/attempts/${id}/submit`, { method: "POST" }),
+  dismissAttempt: (id: string) =>
+    http<AutoApplyAttempt>(`/auto-apply/attempts/${id}/dismiss`, { method: "POST" }),
 };

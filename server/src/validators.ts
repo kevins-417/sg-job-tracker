@@ -63,6 +63,12 @@ export const autoApplyRuleSchema = z.object({
   resumeId: z.string().default(""),
   mode: z.enum(["draft", "submit"]).default("draft"),
   requireReview: z.boolean().default(true),
+  titles: z.array(z.string()).default([]),
+  skills: z.array(z.string()).default([]),
+  locations: z.array(z.string()).default([]),
+  arrangements: z.array(z.string()).default([]),
+  minExperience: z.union([z.number(), z.null()]).default(null),
+  coverTemplate: z.string().default(""),
 });
 
 export type ApplicationInput = z.infer<typeof applicationSchema>;

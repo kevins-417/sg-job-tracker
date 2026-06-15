@@ -69,6 +69,12 @@ export interface AutoApplyRule {
   resumeId: string;
   mode: "draft" | "submit";
   requireReview: boolean;
+  titles: string[];
+  skills: string[];
+  locations: string[];
+  arrangements: string[];
+  minExperience: number | null;
+  coverTemplate: string;
   _new?: boolean;
 }
 
@@ -78,21 +84,28 @@ export interface AutoApplyAttempt {
   company: string;
   title: string;
   portal: string;
-  outcome: "queued" | "drafted" | "skipped" | "blocked";
+  outcome: "prepared" | "submitted" | "dismissed" | "skipped" | "blocked";
   reason: string;
   applicationId: string | null;
+  fitScore: number;
+  fitReasons: string[];
+  coverLetter: string;
+  jobUrl: string;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  location: string;
+  arrangement: string;
   createdAt?: string;
 }
 
 export interface AutoApplyRunResult {
   ruleId: string;
   enabled: boolean;
-  mode: string;
   considered: number;
   matched: number;
-  drafted: number;
-  blocked: number;
-  attempts: AutoApplyAttempt[];
+  prepared: number;
+  belowThreshold: number;
+  topScore: number;
   notice: string;
 }
 

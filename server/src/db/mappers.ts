@@ -73,6 +73,12 @@ export function rowToAutoApplyRule(r: any): AutoApplyRule {
     resumeId: r.resume_id ?? "",
     mode: r.mode === "submit" ? "submit" : "draft",
     requireReview: !!r.require_review,
+    titles: r.titles ?? [],
+    skills: r.skills ?? [],
+    locations: r.locations ?? [],
+    arrangements: r.arrangements ?? [],
+    minExperience: r.min_experience === null || r.min_experience === undefined ? null : Number(r.min_experience),
+    coverTemplate: r.cover_template ?? "",
     createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   };
 }
@@ -84,9 +90,17 @@ export function rowToAutoApplyAttempt(r: any): AutoApplyAttempt {
     company: r.company ?? "",
     title: r.title ?? "",
     portal: r.portal ?? "",
-    outcome: r.outcome ?? "queued",
+    outcome: r.outcome ?? "prepared",
     reason: r.reason ?? "",
     applicationId: r.application_id ?? null,
+    fitScore: r.fit_score === null || r.fit_score === undefined ? 0 : Number(r.fit_score),
+    fitReasons: r.fit_reasons ?? [],
+    coverLetter: r.cover_letter ?? "",
+    jobUrl: r.job_url ?? "",
+    salaryMin: r.salary_min === null || r.salary_min === undefined ? null : Number(r.salary_min),
+    salaryMax: r.salary_max === null || r.salary_max === undefined ? null : Number(r.salary_max),
+    location: r.location ?? "",
+    arrangement: r.arrangement ?? "",
     createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   };
 }

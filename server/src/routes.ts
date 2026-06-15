@@ -71,9 +71,10 @@ api.get("/resumes", wrap(async (_req, res) => {
   res.json(await coRepo.listResumes());
 }));
 
-// ---------- Auto-apply (Phase 2 preview) ----------
-// Rule-driven, review-first job auto-drafting. Does NOT submit to external
-// portals — see repositories/autoApply.ts for the guardrails.
+// ---------- Auto-apply (prepare-and-review queue) ----------
+// Rule-driven preparation of tailored applications. NEVER submits to external
+// portals — see repositories/autoApply.ts. The user submits on the portal and
+// marks the item submitted here.
 api.get("/auto-apply/rules", wrap(async (_req, res) => {
   res.json(await autoRepo.listRules());
 }));
@@ -92,17 +93,43 @@ api.delete("/auto-apply/rules/:id", wrap(async (req, res) => {
   res.status(204).end();
 }));
 
-api.get("/auto-apply/attempts", wrap(async (req, res) => {
-  const ruleId = typeof req.query.ruleId === "string" ? req.query.ruleId : undefined;
-  res.json(await autoRepo.listAttempts(ruleId));
-}));
-
-// Runs the matcher for one rule against the mock feed. In draft mode this
-// creates Draft applications; in submit mode it refuses and logs why.
+// Score the feed and prepare queue items for a rule.
 api.post("/auto-apply/rules/:id/run", wrap(async (req, res) => {
   try {
     res.json(await autoRepo.runRule(req.params.id));
   } catch (e) {
     res.status(404).json({ error: (e as Error).message });
   }
+}));
+
+// The review queue: items still awaiting a decision.
+api.get("/auto-apply/queue", wrap(async (_req, res) => {
+  res.json(await autoRepo.listQueue());
+}));
+
+// Full activity log (prepared + submitted + dismissed).
+api.get("/auto-apply/attempts", wrap(async (req, res) => {
+  const ruleId = typeof req.query.ruleId === "string" ? req.query.ruleId : undefined;
+  res.json(await autoRepo.listAttempts(ruleId));
+}));
+
+// Edit a prepared cover letter before submitting.
+api.put("/auto-apply/attempts/:id/cover", wrap(async (req, res) => {
+  const cover = typeof req.body?.coverLetter === "string" ? req.body.coverLetter : "";
+  const updated = await autoRepo.updateCoverLetter(req.params.id, cover);
+  if (!updated) return res.status(404).json({ error: "Prepared item not found" });
+  res.json(updated);
+}));
+
+// Mark an item submitted-by-user; creates a tracked application. Sends nothing.
+api.post("/auto-apply/attempts/:id/submit", wrap(async (req, res) => {
+  const result = await autoRepo.markSubmitted(req.params.id);
+  if (!result) return res.status(404).json({ error: "Item not found" });
+  res.json(result);
+}));
+
+api.post("/auto-apply/attempts/:id/dismiss", wrap(async (req, res) => {
+  const updated = await autoRepo.dismissAttempt(req.params.id);
+  if (!updated) return res.status(404).json({ error: "Item not found" });
+  res.json(updated);
 }));

@@ -17,7 +17,7 @@ organised as an npm-workspaces monorepo.
 - **Companies** — per-company profiles with applied/open/contacts stats.
 - **Interviews** — upcoming vs. past rounds with meeting links.
 - **Analytics** — conversion funnel, best-performing portals, resume performance.
-- **Auto-apply (preview)** — rule-driven *drafting*. See [Auto-apply](#auto-apply-preview) below.
+- **Auto-apply** — prepares tailored applications (fit score + cover letter) for your review; you submit. See [Auto-apply](#auto-apply-prepare-and-review-queue) below.
 - **SG Market Insights** — EP-eligibility counts, salary-vs-benchmark gauges, portal response rates.
 
 Light/dark mode throughout. Sample data is seeded so every screen is populated on first run.
@@ -158,40 +158,54 @@ Base path `/api`. All bodies are JSON.
 | POST | `/companies` | Create / update (upsert) |
 | DELETE | `/companies/:id` | Delete |
 | GET | `/resumes` | List resumes |
-| GET | `/auto-apply/rules` | List auto-apply rules |
+| GET | `/auto-apply/rules` | List matching rules |
 | POST | `/auto-apply/rules` | Create / update a rule |
 | DELETE | `/auto-apply/rules/:id` | Delete a rule |
-| POST | `/auto-apply/rules/:id/run` | Run the matcher for a rule |
-| GET | `/auto-apply/attempts` | Recent auto-apply activity |
+| POST | `/auto-apply/rules/:id/run` | Scan jobs and prepare queue items for a rule |
+| GET | `/auto-apply/queue` | Items prepared and awaiting your decision |
+| GET | `/auto-apply/attempts` | Full activity log (prepared/submitted/dismissed) |
+| PUT | `/auto-apply/attempts/:id/cover` | Edit a prepared cover letter |
+| POST | `/auto-apply/attempts/:id/submit` | Mark submitted-by-user; creates a tracked application |
+| POST | `/auto-apply/attempts/:id/dismiss` | Remove an item from the queue |
 | GET | `/health` | Health check |
 
 ---
 
-## Auto-apply (preview)
+## Auto-apply (prepare-and-review queue)
 
-The product spec lists **"automatic job scraping from Singapore portals"** as a
-*Phase 2* enhancement and recruiter-email parsing as *Phase 3*. It does **not**
-ask for unattended submission of applications to third-party portals — and for
-good reason, since each portal (MyCareersFuture, LinkedIn, JobStreet, …) has its
-own terms of service.
+This is **not** silent auto-submission, and that's deliberate. Software that
+logs into MyCareersFuture, LinkedIn, JobStreet, etc. as you and fires off
+applications violates every one of those portals' terms of service and gets
+real accounts banned — LinkedIn in particular detects and suspends for it. It
+would also attach your name to applications you never saw. So this build does
+the part that actually saves time — reading postings, judging fit, and
+tailoring materials — and leaves the final click to you.
 
-This build includes auto-apply as a **review-first preview** that respects that
-boundary:
+**How it works:**
 
-- A **rule** describes what you want drafted: keywords, industries, portals, a
-  minimum salary, and which resume to attach.
-- Running a rule scans a **sample job feed** (a real feed is the Phase 2
-  integration and is intentionally not wired up) and, in **draft mode**, creates
-  `Draft` applications matching your criteria for you to review and submit
-  yourself.
-- **Submit mode is blocked by design.** The server refuses to auto-submit, logs
-  each match as `blocked`, and creates nothing. Even configuring a rule to skip
-  review is overridden server-side.
+1. You create a **matching rule**: target job titles, key skills /
+   responsibilities, industries, a salary floor, preferred work arrangement
+   (on-site / hybrid / remote), locations, minimum experience, which résumé to
+   attach, and an optional cover-letter style note.
+2. Running the rule scans available jobs and, for each strong match, **prepares
+   a ready-to-go application**: a fit score (0–100), the specific reasons it
+   matched, and a **tailored cover letter** woven from the matched skills and
+   the company/role.
+3. The matches land in a **review queue**, ranked by fit. You read each one,
+   edit the cover letter if you like, then either **Submit** or **Dismiss**.
+4. **Submit** opens the job posting in a new tab so *you* apply on the portal,
+   and records the application in your tracker (status `Applied`, with a
+   timeline note). It never sends anything to the portal itself.
 
-So "auto-apply" here means *auto-draft for your review* — never silent
-submission. To extend it into real scraping later, replace the mock feed in
-`server/src/repositories/autoApply.ts` and add a properly authenticated,
-ToS-compliant portal integration.
+A salary floor acts as a hard gate (jobs paying below it are dropped entirely);
+every other criterion contributes weighted points toward the fit score, and
+criteria you leave blank simply don't count.
+
+The job feed here is a **sample**. Wiring a real one is the Phase 2 integration
+and is intentionally left out — replace the `MOCK_FEED` in
+`server/src/repositories/autoApply.ts` with a real, ToS-compliant source when
+you're ready. The cover-letter generator is deterministic and template-based
+(no external API); swap in an LLM call there if you want richer letters.
 
 ---
 

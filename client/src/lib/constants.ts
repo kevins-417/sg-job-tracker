@@ -36,6 +36,8 @@ export const INDUSTRIES = [
 
 export const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Temporary"] as const;
 
+export const WORK_ARRANGEMENTS = ["on-site", "hybrid", "remote"] as const;
+
 // Singapore work-pass salary thresholds (monthly, SGD). Illustrative — these
 // rise with age and change over time. Verify against MOM before relying on them.
 export const EP_MIN_SALARY = 5600;

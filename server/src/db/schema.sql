@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS auto_apply_rules (
   id              TEXT PRIMARY KEY,
   label           TEXT NOT NULL,
   enabled         BOOLEAN NOT NULL DEFAULT false,
-  keywords        TEXT DEFAULT '',          -- comma-separated match terms
+  keywords        TEXT DEFAULT '',          -- comma-separated match terms (title/company)
   industries      JSONB NOT NULL DEFAULT '[]'::jsonb,
   portals         JSONB NOT NULL DEFAULT '[]'::jsonb,
   min_salary      INTEGER,                  -- monthly SGD floor
@@ -74,6 +74,13 @@ CREATE TABLE IF NOT EXISTS auto_apply_rules (
   -- on this mode and logs why.
   mode            TEXT NOT NULL DEFAULT 'draft',
   require_review  BOOLEAN NOT NULL DEFAULT true,
+  -- Richer matching profile (prepare-and-review queue):
+  titles          JSONB NOT NULL DEFAULT '[]'::jsonb,  -- desired job titles / types
+  skills          JSONB NOT NULL DEFAULT '[]'::jsonb,  -- responsibilities / must-have skills
+  locations       JSONB NOT NULL DEFAULT '[]'::jsonb,  -- preferred SG locations
+  arrangements    JSONB NOT NULL DEFAULT '[]'::jsonb,  -- on-site | hybrid | remote
+  min_experience  INTEGER,                             -- years
+  cover_template  TEXT DEFAULT '',                     -- optional cover-letter style note
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -83,11 +90,41 @@ CREATE TABLE IF NOT EXISTS auto_apply_attempts (
   company         TEXT DEFAULT '',
   title           TEXT DEFAULT '',
   portal          TEXT DEFAULT '',
-  -- queued | drafted | skipped | blocked
-  outcome         TEXT NOT NULL DEFAULT 'queued',
+  -- prepared | submitted | dismissed | skipped | blocked
+  outcome         TEXT NOT NULL DEFAULT 'prepared',
   reason          TEXT DEFAULT '',
   application_id  TEXT,                      -- set when a Draft was created
+  -- Prepared-application payload for the review queue:
+  fit_score       INTEGER DEFAULT 0,         -- 0..100
+  fit_reasons     JSONB NOT NULL DEFAULT '[]'::jsonb,
+  cover_letter    TEXT DEFAULT '',
+  job_url         TEXT DEFAULT '',           -- where the user goes to submit
+  salary_min      INTEGER,
+  salary_max      INTEGER,
+  location        TEXT DEFAULT '',
+  arrangement     TEXT DEFAULT '',
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_attempts_rule ON auto_apply_attempts (rule_id);
+CREATE INDEX IF NOT EXISTS idx_attempts_outcome ON auto_apply_attempts (outcome);
+
+-- ---------------------------------------------------------------------------
+-- Safe upgrades for databases created by an earlier version. These are
+-- idempotent: ADD COLUMN IF NOT EXISTS does nothing if the column is already
+-- there, so re-running the migration upgrades an existing DB without data loss.
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS titles JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS locations JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS arrangements JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS min_experience INTEGER;
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS cover_template TEXT DEFAULT '';
+
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS fit_score INTEGER DEFAULT 0;
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS fit_reasons JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS cover_letter TEXT DEFAULT '';
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS job_url TEXT DEFAULT '';
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS salary_min INTEGER;
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS salary_max INTEGER;
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS location TEXT DEFAULT '';
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS arrangement TEXT DEFAULT '';
