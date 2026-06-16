@@ -1,5 +1,6 @@
 import type {
   Application, Company, Resume, AutoApplyRule, AutoApplyAttempt, AutoApplyRunResult,
+  SearchProfile, Page,
 } from "./types";
 
 // Empty in dev (Vite proxy forwards /api to :4000). In production set
@@ -44,15 +45,27 @@ export const api = {
   // Resumes
   listResumes: () => http<Resume[]>("/resumes"),
 
+  // Search profiles
+  listProfiles: () => http<SearchProfile[]>("/profiles"),
+  upsertProfile: (body: SearchProfile) =>
+    http<SearchProfile>("/profiles", { method: "POST", body: JSON.stringify(body) }),
+  deleteProfile: (id: string) => http<void>(`/profiles/${id}`, { method: "DELETE" }),
+
   // Auto-apply (prepare-and-review queue)
-  listRules: () => http<AutoApplyRule[]>("/auto-apply/rules"),
+  listRules: (profileId?: string) =>
+    http<AutoApplyRule[]>(`/auto-apply/rules${profileId ? `?profileId=${profileId}` : ""}`),
   upsertRule: (body: AutoApplyRule) =>
     http<AutoApplyRule>("/auto-apply/rules", { method: "POST", body: JSON.stringify(body) }),
   deleteRule: (id: string) =>
     http<void>(`/auto-apply/rules/${id}`, { method: "DELETE" }),
   runRule: (id: string) =>
     http<AutoApplyRunResult>(`/auto-apply/rules/${id}/run`, { method: "POST" }),
-  listQueue: () => http<AutoApplyAttempt[]>("/auto-apply/queue"),
+  refreshAll: () =>
+    http<{ ran: number; prepared: number }>("/auto-apply/refresh", { method: "POST" }),
+  listQueue: (page = 1, pageSize = 6, profileId?: string) =>
+    http<Page<AutoApplyAttempt>>(`/auto-apply/queue?page=${page}&pageSize=${pageSize}${profileId ? `&profileId=${profileId}` : ""}`),
+  listApplied: (page = 1, pageSize = 6) =>
+    http<Page<AutoApplyAttempt>>(`/auto-apply/applied?page=${page}&pageSize=${pageSize}`),
   listAttempts: (ruleId?: string) =>
     http<AutoApplyAttempt[]>(`/auto-apply/attempts${ruleId ? `?ruleId=${ruleId}` : ""}`),
   updateCover: (id: string, coverLetter: string) =>

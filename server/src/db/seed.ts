@@ -91,7 +91,7 @@ const applications = [
 
 async function seed() {
   console.log("[seed] clearing existing rows…");
-  await query("TRUNCATE applications, companies, resumes, auto_apply_rules, auto_apply_attempts RESTART IDENTITY CASCADE");
+  await query("TRUNCATE applications, companies, resumes, auto_apply_rules, auto_apply_attempts, search_profiles, seen_jobs RESTART IDENTITY CASCADE");
 
   console.log("[seed] inserting companies…");
   for (const c of companies) {
@@ -131,14 +131,19 @@ async function seed() {
     );
   }
 
-  console.log("[seed] inserting auto-apply rule (disabled example)…");
+  console.log("[seed] inserting search profile + auto-apply rule (disabled example)…");
+  const profileId = uid();
+  await query(
+    `INSERT INTO search_profiles (id, name, description) VALUES ($1,$2,$3)`,
+    [profileId, "Senior PM — Default", "Senior product roles across tech, finance and government."]
+  );
   await query(
     `INSERT INTO auto_apply_rules
       (id, label, enabled, keywords, industries, portals, min_salary, resume_id,
        mode, require_review, titles, skills, locations, arrangements,
-       min_experience, cover_template)
+       min_experience, cover_template, profile_id, auto_refresh)
      VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8,$9,$10,
-             $11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16)`,
+             $11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16,$17,$18)`,
     [
       uid(), "Senior PM roles (review first)", false, "product manager, product owner",
       JSON.stringify(["Technology", "Finance & Banking", "Government"]),
@@ -149,6 +154,7 @@ async function seed() {
       JSON.stringify(["One-North", "Marina Bay", "Pasir Panjang"]),
       JSON.stringify(["hybrid", "remote"]),
       5, "Warm but concise; lead with product outcomes and metrics.",
+      profileId, true,
     ]
   );
 

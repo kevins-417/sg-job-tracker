@@ -63,6 +63,13 @@ export interface Resume {
   targetIndustry: string;
 }
 
+export interface SearchProfile {
+  id: string;
+  name: string;
+  description: string;
+  createdAt?: string;
+}
+
 export interface AutoApplyRule {
   id: string;
   label: string;
@@ -74,13 +81,15 @@ export interface AutoApplyRule {
   resumeId: string;
   mode: "draft" | "submit";
   requireReview: boolean;
-  // Richer matching profile
   titles: string[];
   skills: string[];
   locations: string[];
-  arrangements: string[];   // on-site | hybrid | remote
+  arrangements: string[];
   minExperience: number | null;
   coverTemplate: string;
+  profileId: string;
+  lastRunAt: string | null;
+  autoRefresh: boolean;
   createdAt?: string;
 }
 
@@ -93,7 +102,6 @@ export interface AutoApplyAttempt {
   outcome: "prepared" | "submitted" | "dismissed" | "skipped" | "blocked";
   reason: string;
   applicationId: string | null;
-  // Prepared-application payload
   fitScore: number;
   fitReasons: string[];
   coverLetter: string;

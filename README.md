@@ -17,7 +17,7 @@ organised as an npm-workspaces monorepo.
 - **Companies** — per-company profiles with applied/open/contacts stats.
 - **Interviews** — upcoming vs. past rounds with meeting links.
 - **Analytics** — conversion funnel, best-performing portals, resume performance.
-- **Auto-apply** — prepares tailored applications (fit score + cover letter) for your review; you submit. See [Auto-apply](#auto-apply-prepare-and-review-queue) below.
+- **Auto-apply** — search profiles, daily + manual match refresh, tailored cover letters, and a paginated review queue; applied jobs stay listed (greyed) and aren't re-suggested. See [Auto-apply](#auto-apply-prepare-and-review-queue) below.
 - **SG Market Insights** — EP-eligibility counts, salary-vs-benchmark gauges, portal response rates.
 
 Light/dark mode throughout. Sample data is seeded so every screen is populated on first run.
@@ -158,12 +158,17 @@ Base path `/api`. All bodies are JSON.
 | POST | `/companies` | Create / update (upsert) |
 | DELETE | `/companies/:id` | Delete |
 | GET | `/resumes` | List resumes |
-| GET | `/auto-apply/rules` | List matching rules |
+| GET | `/profiles` | List search profiles |
+| POST | `/profiles` | Create / update a profile |
+| DELETE | `/profiles/:id` | Delete a profile (rules are kept, detached) |
+| GET | `/auto-apply/rules` | List matching rules (optionally `?profileId=`) |
 | POST | `/auto-apply/rules` | Create / update a rule |
 | DELETE | `/auto-apply/rules/:id` | Delete a rule |
-| POST | `/auto-apply/rules/:id/run` | Scan jobs and prepare queue items for a rule |
-| GET | `/auto-apply/queue` | Items prepared and awaiting your decision |
-| GET | `/auto-apply/attempts` | Full activity log (prepared/submitted/dismissed) |
+| POST | `/auto-apply/rules/:id/run` | Refresh one rule (scan + prepare) |
+| POST | `/auto-apply/refresh` | Refresh all enabled rules (the "Refresh now" button) |
+| GET | `/auto-apply/queue` | Paginated review queue (`?page=&pageSize=&profileId=`) |
+| GET | `/auto-apply/applied` | Paginated applied feed (`?page=&pageSize=`) |
+| GET | `/auto-apply/attempts` | Full activity log |
 | PUT | `/auto-apply/attempts/:id/cover` | Edit a prepared cover letter |
 | POST | `/auto-apply/attempts/:id/submit` | Mark submitted-by-user; creates a tracked application |
 | POST | `/auto-apply/attempts/:id/dismiss` | Remove an item from the queue |
@@ -206,6 +211,28 @@ and is intentionally left out — replace the `MOCK_FEED` in
 `server/src/repositories/autoApply.ts` with a real, ToS-compliant source when
 you're ready. The cover-letter generator is deterministic and template-based
 (no external API); swap in an LLM call there if you want richer letters.
+
+### Refresh, profiles, applied-job handling, and pagination
+
+- **Search profiles.** Group separate searches (e.g. "Senior PM — Fintech" vs
+  "Product Lead — Govtech"), each with its own rules. Switch profiles from the
+  bar at the top of the Auto-apply page; the queue and rules filter to match.
+- **Daily + manual refresh.** Enabled rules with auto-refresh on are re-scanned
+  automatically every 24 hours (on server boot and via a timer), and you can
+  force a refresh anytime with **Refresh now**. Each rule records its last
+  refresh time.
+- **Applied jobs stay visible and aren't re-suggested.** When you submit an
+  item, it moves to a greyed **Applied** list and is recorded as "seen", so
+  refreshes never surface it again. Dismissed jobs are likewise suppressed. To
+  let a job reappear, delete its application from the **Applications** page —
+  that frees it for future refreshes.
+- **Pagination.** Both the review queue and the applied feed are paginated, so a
+  long list of matches stays manageable.
+
+> On free hosting that sleeps (e.g. Render free tier), the once-per-boot refresh
+> is what keeps matches current — the app re-scans when it wakes. For guaranteed
+> daily runs independent of traffic, add a scheduled ping or a cron job hitting
+> `POST /auto-apply/refresh`.
 
 ---
 

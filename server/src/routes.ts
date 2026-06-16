@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { applicationSchema, companySchema, autoApplyRuleSchema } from "./validators.js";
+import { applicationSchema, companySchema, autoApplyRuleSchema, searchProfileSchema } from "./validators.js";
 import * as appsRepo from "./repositories/applications.js";
 import * as coRepo from "./repositories/companies.js";
 import * as autoRepo from "./repositories/autoApply.js";
@@ -71,19 +71,33 @@ api.get("/resumes", wrap(async (_req, res) => {
   res.json(await coRepo.listResumes());
 }));
 
+// ---------- Search profiles ----------
+api.get("/profiles", wrap(async (_req, res) => {
+  res.json(await autoRepo.listProfiles());
+}));
+
+api.post("/profiles", wrap(async (req, res) => {
+  const parsed = searchProfileSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
+  res.status(201).json(await autoRepo.upsertProfile(parsed.data));
+}));
+
+api.delete("/profiles/:id", wrap(async (req, res) => {
+  const ok = await autoRepo.deleteProfile(req.params.id);
+  if (!ok) return res.status(404).json({ error: "Profile not found" });
+  res.status(204).end();
+}));
+
 // ---------- Auto-apply (prepare-and-review queue) ----------
-// Rule-driven preparation of tailored applications. NEVER submits to external
-// portals — see repositories/autoApply.ts. The user submits on the portal and
-// marks the item submitted here.
-api.get("/auto-apply/rules", wrap(async (_req, res) => {
-  res.json(await autoRepo.listRules());
+// Rules can be scoped to a profile via ?profileId=.
+api.get("/auto-apply/rules", wrap(async (req, res) => {
+  const profileId = typeof req.query.profileId === "string" ? req.query.profileId : undefined;
+  res.json(await autoRepo.listRules(profileId));
 }));
 
 api.post("/auto-apply/rules", wrap(async (req, res) => {
   const parsed = autoApplyRuleSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
-  }
+  if (!parsed.success) return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
   res.status(201).json(await autoRepo.upsertRule(parsed.data));
 }));
 
@@ -93,27 +107,45 @@ api.delete("/auto-apply/rules/:id", wrap(async (req, res) => {
   res.status(204).end();
 }));
 
-// Score the feed and prepare queue items for a rule.
+// Manually refresh a single rule.
 api.post("/auto-apply/rules/:id/run", wrap(async (req, res) => {
-  try {
-    res.json(await autoRepo.runRule(req.params.id));
-  } catch (e) {
-    res.status(404).json({ error: (e as Error).message });
+  try { res.json(await autoRepo.runRule(req.params.id)); }
+  catch (e) { res.status(404).json({ error: (e as Error).message }); }
+}));
+
+// Manually refresh ALL eligible rules (the "Refresh now" button).
+api.post("/auto-apply/refresh", wrap(async (_req, res) => {
+  // Force-run every enabled rule regardless of last_run timing.
+  const rules = await autoRepo.listRules();
+  let prepared = 0, ran = 0;
+  for (const r of rules) {
+    if (!r.enabled) continue;
+    const result = await autoRepo.runRule(r.id);
+    prepared += result.prepared; ran++;
   }
+  res.json({ ran, prepared });
 }));
 
-// The review queue: items still awaiting a decision.
-api.get("/auto-apply/queue", wrap(async (_req, res) => {
-  res.json(await autoRepo.listQueue());
+// Paginated review queue. ?page=&pageSize=&profileId=
+api.get("/auto-apply/queue", wrap(async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query.pageSize ?? "6"), 10) || 6));
+  const profileId = typeof req.query.profileId === "string" && req.query.profileId ? req.query.profileId : undefined;
+  res.json(await autoRepo.listQueue(page, pageSize, profileId));
 }));
 
-// Full activity log (prepared + submitted + dismissed).
+// Paginated applied feed (greyed-out, already submitted). ?page=&pageSize=
+api.get("/auto-apply/applied", wrap(async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query.pageSize ?? "6"), 10) || 6));
+  res.json(await autoRepo.listApplied(page, pageSize));
+}));
+
 api.get("/auto-apply/attempts", wrap(async (req, res) => {
   const ruleId = typeof req.query.ruleId === "string" ? req.query.ruleId : undefined;
   res.json(await autoRepo.listAttempts(ruleId));
 }));
 
-// Edit a prepared cover letter before submitting.
 api.put("/auto-apply/attempts/:id/cover", wrap(async (req, res) => {
   const cover = typeof req.body?.coverLetter === "string" ? req.body.coverLetter : "";
   const updated = await autoRepo.updateCoverLetter(req.params.id, cover);
@@ -121,7 +153,6 @@ api.put("/auto-apply/attempts/:id/cover", wrap(async (req, res) => {
   res.json(updated);
 }));
 
-// Mark an item submitted-by-user; creates a tracked application. Sends nothing.
 api.post("/auto-apply/attempts/:id/submit", wrap(async (req, res) => {
   const result = await autoRepo.markSubmitted(req.params.id);
   if (!result) return res.status(404).json({ error: "Item not found" });

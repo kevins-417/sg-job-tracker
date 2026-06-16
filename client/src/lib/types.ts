@@ -58,6 +58,21 @@ export interface Resume {
   targetIndustry: string;
 }
 
+export interface SearchProfile {
+  id: string;
+  name: string;
+  description: string;
+  _new?: boolean;
+}
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pages: number;
+}
+
 export interface AutoApplyRule {
   id: string;
   label: string;
@@ -75,6 +90,9 @@ export interface AutoApplyRule {
   arrangements: string[];
   minExperience: number | null;
   coverTemplate: string;
+  profileId: string;
+  lastRunAt: string | null;
+  autoRefresh: boolean;
   _new?: boolean;
 }
 
@@ -105,6 +123,7 @@ export interface AutoApplyRunResult {
   matched: number;
   prepared: number;
   belowThreshold: number;
+  skippedApplied: number;
   topScore: number;
   notice: string;
 }

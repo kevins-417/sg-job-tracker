@@ -69,8 +69,17 @@ export const autoApplyRuleSchema = z.object({
   arrangements: z.array(z.string()).default([]),
   minExperience: z.union([z.number(), z.null()]).default(null),
   coverTemplate: z.string().default(""),
+  profileId: z.string().default(""),
+  autoRefresh: z.boolean().default(true),
+});
+
+export const searchProfileSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "name is required"),
+  description: z.string().default(""),
 });
 
 export type ApplicationInput = z.infer<typeof applicationSchema>;
 export type CompanyInput = z.infer<typeof companySchema>;
 export type AutoApplyRuleInput = z.infer<typeof autoApplyRuleSchema>;
+export type SearchProfileInput = z.infer<typeof searchProfileSchema>;

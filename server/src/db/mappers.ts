@@ -1,5 +1,5 @@
 import type {
-  Application, Company, Resume, AutoApplyRule, AutoApplyAttempt,
+  Application, Company, Resume, AutoApplyRule, AutoApplyAttempt, SearchProfile,
 } from "../types.js";
 
 // Postgres returns DATE columns as JS Date objects (or strings depending on
@@ -79,6 +79,9 @@ export function rowToAutoApplyRule(r: any): AutoApplyRule {
     arrangements: r.arrangements ?? [],
     minExperience: r.min_experience === null || r.min_experience === undefined ? null : Number(r.min_experience),
     coverTemplate: r.cover_template ?? "",
+    profileId: r.profile_id ?? "",
+    lastRunAt: r.last_run_at?.toISOString?.() ?? r.last_run_at ?? null,
+    autoRefresh: r.auto_refresh === undefined ? true : !!r.auto_refresh,
     createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   };
 }
@@ -101,6 +104,15 @@ export function rowToAutoApplyAttempt(r: any): AutoApplyAttempt {
     salaryMax: r.salary_max === null || r.salary_max === undefined ? null : Number(r.salary_max),
     location: r.location ?? "",
     arrangement: r.arrangement ?? "",
+    createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  };
+}
+
+export function rowToSearchProfile(r: any): SearchProfile {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description ?? "",
     createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   };
 }

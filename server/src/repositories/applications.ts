@@ -66,6 +66,14 @@ export async function updateApplication(
 }
 
 export async function deleteApplication(id: string): Promise<boolean> {
+  // Free any auto-apply "seen" record tied to this application so the job can
+  // be surfaced again on a future refresh.
+  try {
+    const mod = await import("./autoApply.js");
+    await mod.forgetSeenByApplication(id);
+  } catch (e) {
+    // autoApply table may not exist in minimal setups; ignore.
+  }
   const { rowCount } = await query("DELETE FROM applications WHERE id = $1", [id]);
   return (rowCount ?? 0) > 0;
 }

@@ -128,3 +128,35 @@ ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS salary_min INTEGER;
 ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS salary_max INTEGER;
 ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS location TEXT DEFAULT '';
 ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS arrangement TEXT DEFAULT '';
+
+-- ---------------------------------------------------------------------------
+-- Search profiles: a named container so the user can keep separate searches
+-- (e.g. "Senior PM — Fintech" vs "Product Lead — Govtech"), each with its own
+-- rules. A rule belongs to at most one profile.
+CREATE TABLE IF NOT EXISTS search_profiles (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Link rules to a profile, and track refresh scheduling.
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS profile_id TEXT DEFAULT '';
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS auto_refresh BOOLEAN NOT NULL DEFAULT true;
+
+-- Remember which jobs the user has applied to (or dismissed), keyed by a stable
+-- job identifier, so a refresh never re-prepares them. This is what makes
+-- "don't show applied roles again unless removed" work across refreshes.
+CREATE TABLE IF NOT EXISTS seen_jobs (
+  job_key     TEXT PRIMARY KEY,          -- stable hash of company+title+portal
+  status      TEXT NOT NULL DEFAULT 'applied',  -- applied | dismissed
+  company     TEXT DEFAULT '',
+  title       TEXT DEFAULT '',
+  portal      TEXT DEFAULT '',
+  application_id TEXT,                    -- the tracked application, if applied
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rules_profile ON auto_apply_rules (profile_id);
+CREATE INDEX IF NOT EXISTS idx_seen_status ON seen_jobs (status);

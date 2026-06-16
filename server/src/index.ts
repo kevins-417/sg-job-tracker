@@ -43,4 +43,16 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 app.listen(PORT, () => {
   console.log(`[api] listening on http://localhost:${PORT}`);
   console.log(`[api] allowed CORS origins: ${origins.join(", ")}`);
+
+  // Daily auto-refresh of job matches. Runs any eligible rule on boot (catching
+  // up if the server was asleep), then every 24h while it stays awake. On
+  // free hosting that sleeps, the boot run is what keeps matches fresh.
+  import("./repositories/autoApply.js")
+    .then((m) => {
+      m.runDueRules().catch((e) => console.error("[auto-refresh] boot run failed", e));
+      setInterval(() => {
+        m.runDueRules().catch((e) => console.error("[auto-refresh] timer run failed", e));
+      }, 24 * 60 * 60 * 1000);
+    })
+    .catch((e) => console.error("[auto-refresh] init failed", e));
 });

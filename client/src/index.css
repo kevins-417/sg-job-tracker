@@ -52,3 +52,6 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+@keyframes sgjt-spin { to { transform: rotate(360deg); } }
+.sgjt-spin { animation: sgjt-spin 0.9s linear infinite; }
