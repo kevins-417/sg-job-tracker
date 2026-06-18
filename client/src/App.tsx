@@ -295,7 +295,7 @@ export default function App() {
                   onMove={moveStatus} onOpen={setDetailId} onEdit={setEditing}
                 />
               )}
-              {view === "companies" && <Companies companies={companies} apps={apps} C={C} dark={dark} onUpsert={upsertCompany} onDelete={deleteCompany} />}
+              {view === "companies" && <Companies companies={companies} apps={apps} C={C} dark={dark} onUpsert={upsertCompany} onDelete={deleteCompany} onOpenApp={setDetailId} />}
               {view === "interviews" && <Interviews list={apps} C={C} dark={dark} onOpen={setDetailId} />}
               {view === "analytics" && <Analytics list={apps} resumes={resumes} C={C} dark={dark} />}
               {view === "autoapply" && <AutoApply resumes={resumes} C={C} dark={dark} onDataChanged={reloadApps} />}
