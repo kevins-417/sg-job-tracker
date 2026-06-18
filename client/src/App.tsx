@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   LayoutDashboard, Briefcase, Building2, CalendarDays, BarChart3, MapPin,
-  Plus, Search, Moon, Sun, Zap, type LucideIcon,
+  Plus, Search, Moon, Sun, Zap, UserRound, LogOut, type LucideIcon,
 } from "lucide-react";
-import type { Application, Company, Resume } from "./lib/types";
+import type { Application, Company, Resume, User } from "./lib/types";
 import { palette, blankApp, uid, todayISO } from "./lib/constants";
-import { api } from "./lib/api";
+import { api, getCurrentUserId, setCurrentUserId } from "./lib/api";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Companies from "./pages/Companies";
@@ -15,11 +15,14 @@ import Insights from "./pages/Insights";
 import AutoApply from "./pages/AutoApply";
 import ApplicationForm from "./components/ApplicationForm";
 import DetailDrawer from "./components/DetailDrawer";
+import Login from "./components/Login";
 
 type View = "dashboard" | "applications" | "companies" | "interviews" | "analytics" | "insights" | "autoapply";
 
 export default function App() {
   const [dark, setDark] = useState<boolean>(() => localStorage.getItem("sgjt:theme") === "dark");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userChecked, setUserChecked] = useState(false);
   const [apps, setApps] = useState<Application[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
@@ -38,8 +41,37 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("sgjt:theme", dark ? "dark" : "light"); }, [dark]);
 
-  // Initial load from the API.
+  // On mount, resolve the stored user id (if any) to a user object.
   useEffect(() => {
+    (async () => {
+      const stored = getCurrentUserId();
+      if (stored) {
+        try {
+          const users = await api.listUsers();
+          const found = users.find((u) => u.id === stored) || null;
+          if (found) setCurrentUser(found);
+          else setCurrentUserId(""); // stale id
+        } catch { /* show login */ }
+      }
+      setUserChecked(true);
+    })();
+  }, []);
+
+  const pickUser = useCallback((u: User) => {
+    setCurrentUserId(u.id);
+    setCurrentUser(u);
+    setView("dashboard");
+  }, []);
+
+  const switchUser = useCallback(() => {
+    setCurrentUserId("");
+    setCurrentUser(null);
+    setApps([]); setCompanies([]); setResumes([]);
+  }, []);
+
+  // Load this user's data whenever the picked user changes.
+  useEffect(() => {
+    if (!currentUser) return;
     (async () => {
       try {
         setLoading(true);
@@ -61,7 +93,7 @@ export default function App() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [currentUser]);
 
   const filtered = useMemo(() => {
     return apps.filter((a) => {
@@ -143,6 +175,14 @@ export default function App() {
 
   const detailApp = apps.find((a) => a.id === detailId) || null;
 
+  // Gate on a picked user. While checking the stored id, render nothing brief.
+  if (!userChecked) {
+    return <div style={{ minHeight: "100vh", background: C.bg }} />;
+  }
+  if (!currentUser) {
+    return <Login C={C} dark={dark} onPick={pickUser} />;
+  }
+
   return (
     <div style={{
       minHeight: "100vh", background: C.bg, color: C.text,
@@ -186,6 +226,19 @@ export default function App() {
         })}
 
         <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 999, background: C.accentSoft, display: "grid", placeItems: "center", color: dark ? C.accentDk : C.accent, flexShrink: 0 }}>
+              <UserRound size={15} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 650, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.name}</div>
+              {currentUser.headline && <div style={{ fontSize: 10.5, color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.headline}</div>}
+            </div>
+          </div>
+          <button onClick={switchUser} className="sgjt-nav"
+            style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", borderRadius: 9, border: "none", cursor: "pointer", width: "100%", fontSize: 13, fontWeight: 500, background: "transparent", color: C.dim }}>
+            <LogOut size={16.5} /> Switch user
+          </button>
           <button onClick={() => setDark((d) => !d)} className="sgjt-nav"
             style={{
               display: "flex", alignItems: "center", gap: 11, padding: "9px 11px",

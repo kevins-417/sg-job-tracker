@@ -12,15 +12,16 @@ organised as an npm-workspaces monorepo.
 
 ## Features
 
+- **Multiple users (mock-up)** — pick-a-name sign-in; each person keeps their own applications, companies, profiles, rules, and matches on one shared deployment. See [Multiple users](#multiple-users-mock-up) below.
 - **Dashboard** — KPI cards, applications-by-month, source-portal breakdown, upcoming actions.
 - **Applications** — drag-and-drop Kanban board *and* a sortable table, with status/portal filters and global search.
 - **Companies** — per-company profiles with applied/open/contacts stats.
 - **Interviews** — upcoming vs. past rounds with meeting links.
 - **Analytics** — conversion funnel, best-performing portals, resume performance.
-- **Auto-apply** — search profiles, daily + manual match refresh, tailored cover letters, and a paginated review queue; applied jobs stay listed (greyed) and aren't re-suggested. See [Auto-apply](#auto-apply-prepare-and-review-queue) below.
+- **Auto-apply** — search profiles, daily + manual match refresh, a rich matching profile (titles, must-have/nice-to-have skills, industries, salary floor, company size, seniority band, posting freshness, location, work arrangement, include/exclude keywords), tailored cover letters, and a paginated review queue; applied jobs stay listed (greyed) and aren't re-suggested. See [Auto-apply](#auto-apply-prepare-and-review-queue) below.
 - **SG Market Insights** — EP-eligibility counts, salary-vs-benchmark gauges, portal response rates.
 
-Light/dark mode throughout. Sample data is seeded so every screen is populated on first run.
+Light/dark mode throughout. Sample data is seeded under the demo user **Kevin** so every screen is populated on first run; a second demo user **Priya** starts empty to show per-user separation.
 
 ---
 
@@ -145,10 +146,15 @@ or the Render/Railway built-in Postgres. Paste their connection string into
 
 ## API
 
-Base path `/api`. All bodies are JSON.
+Base path `/api`. All bodies are JSON. Every request may carry an `x-user-id`
+header naming the current user; responses are scoped to that user (plus legacy
+shared rows). Requests with no header see only shared data.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/users` | List users (for the pick-a-name screen) |
+| POST | `/users` | Create a user |
+| DELETE | `/users/:id` | Delete a user **and all their data** |
 | GET | `/applications` | List all applications |
 | GET | `/applications/:id` | One application |
 | POST | `/applications` | Create |
@@ -236,14 +242,47 @@ you're ready. The cover-letter generator is deterministic and template-based
 
 ---
 
+## Multiple users (mock-up)
+
+On first load you get a **pick-a-name** screen instead of a password login.
+Choose an existing person or add a new one, and the whole app — applications,
+companies, search profiles, rules, and the review queue — shows only that
+person's data. Switch people anytime from **Switch user** at the bottom of the
+sidebar.
+
+How it works under the hood: the picked user's id is stored in the browser and
+sent as an `x-user-id` header on every API call. The server scopes every query
+to that user, and each user-owned table carries a `user_id`. Deleting a user
+(from the login screen's trash icon) removes all of their data.
+
+Two demo users are seeded: **Kevin** (with the sample applications and a
+matching rule) and **Priya** (empty, to show the separation). Add as many as
+you like.
+
+This is **demonstration-grade** on purpose — see the first item under
+[Notes & caveats](#notes--caveats) for what to add before real users.
+
+---
+
 ## Notes & caveats
 
+- **Multi-user is a mock-up, not real auth.** Anyone with the app's URL can pick
+  any name from the list and see that person's data — there is no password, no
+  email verification, and no real session. This is intentional for a demo among
+  people you trust. **Before putting real users or real job-search data on it,
+  add real authentication** (password hashing, sessions, rate limiting). The
+  current setup is a clean place to add that: the server already reads a current
+  user per request (the `x-user-id` middleware in `server/src/routes.ts`) and
+  every table is scoped by `user_id`, so swapping the header for a real
+  authenticated session is the main change.
+- **After upgrading an existing database, old data is "shared".** Rows created
+  before multi-user have an empty `user_id`, so they show up for whichever user
+  is signed in until reassigned. To attribute them to one person, set their
+  `user_id` in the database (e.g. `UPDATE applications SET user_id = '<id>'
+  WHERE user_id = ''`). New rows are always scoped to the signed-in user.
 - **Work-pass figures are illustrative.** The EP and S Pass salary thresholds in
   `client/src/lib/constants.ts` are placeholders and rise with age. Verify
   against [MOM](https://www.mom.gov.sg) before relying on them.
-- **No auth yet.** The spec lists email/Google login; this scaffold leaves
-  authentication as the next step. Add it as Express middleware on `/api` and a
-  login screen on the client.
 - **Timeline & interviews** are stored as JSONB on the application row, since
   they're always read and written together with their parent.
 

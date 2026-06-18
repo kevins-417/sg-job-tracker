@@ -71,6 +71,17 @@ export const autoApplyRuleSchema = z.object({
   coverTemplate: z.string().default(""),
   profileId: z.string().default(""),
   autoRefresh: z.boolean().default(true),
+  companySizes: z.array(z.string()).default([]),
+  freshness: z.enum(["24h", "week", "month", "any"]).default("any"),
+  seniority: z.array(z.string()).default([]),
+  includeKeywords: z.string().default(""),
+  excludeKeywords: z.string().default(""),
+  mustHaveSkills: z.array(z.string()).default([]),
+});
+
+export const userSchema = z.object({
+  name: z.string().min(1, "name is required"),
+  headline: z.string().default(""),
 });
 
 export const searchProfileSchema = z.object({
@@ -83,3 +94,4 @@ export type ApplicationInput = z.infer<typeof applicationSchema>;
 export type CompanyInput = z.infer<typeof companySchema>;
 export type AutoApplyRuleInput = z.infer<typeof autoApplyRuleSchema>;
 export type SearchProfileInput = z.infer<typeof searchProfileSchema>;
+export type UserInput = z.infer<typeof userSchema>;

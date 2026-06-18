@@ -73,6 +73,14 @@ export interface Page<T> {
   pages: number;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  headline: string;
+  createdAt?: string;
+  _new?: boolean;
+}
+
 export interface AutoApplyRule {
   id: string;
   label: string;
@@ -93,6 +101,12 @@ export interface AutoApplyRule {
   profileId: string;
   lastRunAt: string | null;
   autoRefresh: boolean;
+  companySizes: string[];
+  freshness: string;
+  seniority: string[];
+  includeKeywords: string;
+  excludeKeywords: string;
+  mustHaveSkills: string[];
   _new?: boolean;
 }
 

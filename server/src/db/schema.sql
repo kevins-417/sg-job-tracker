@@ -160,3 +160,62 @@ CREATE TABLE IF NOT EXISTS seen_jobs (
 
 CREATE INDEX IF NOT EXISTS idx_rules_profile ON auto_apply_rules (profile_id);
 CREATE INDEX IF NOT EXISTS idx_seen_status ON seen_jobs (status);
+
+-- ===========================================================================
+-- Multi-user (mock-up) support.
+--
+-- Demonstration-grade only: users are picked from a list by name, with NO
+-- password, NO email verification, NO session security. This is fine for a
+-- demo where you want separate data per person on one deployment. It is NOT
+-- safe for real users handling real job-search data — see README.
+--
+-- Every user-owned table gets a user_id. Rows with user_id = '' (empty) are
+-- "legacy/shared" and remain visible so existing data isn't orphaned on upgrade.
+CREATE TABLE IF NOT EXISTS users (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  headline    TEXT DEFAULT '',          -- e.g. "Senior PM" — shown in the switcher
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE applications      ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+ALTER TABLE companies         ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+ALTER TABLE resumes           ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+ALTER TABLE search_profiles   ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+ALTER TABLE auto_apply_rules  ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+ALTER TABLE auto_apply_attempts ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+ALTER TABLE seen_jobs         ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS idx_apps_user ON applications (user_id);
+CREATE INDEX IF NOT EXISTS idx_companies_user ON companies (user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_user ON search_profiles (user_id);
+CREATE INDEX IF NOT EXISTS idx_rules_user ON auto_apply_rules (user_id);
+CREATE INDEX IF NOT EXISTS idx_attempts_user ON auto_apply_attempts (user_id);
+CREATE INDEX IF NOT EXISTS idx_seen_user ON seen_jobs (user_id);
+
+-- seen_jobs was keyed by job_key alone; for multi-user it must be unique per
+-- (user, job). Recreate the key if needed.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'seen_jobs' AND constraint_type = 'PRIMARY KEY'
+      AND constraint_name = 'seen_jobs_pkey'
+  ) THEN
+    BEGIN
+      ALTER TABLE seen_jobs DROP CONSTRAINT seen_jobs_pkey;
+    EXCEPTION WHEN others THEN NULL;
+    END;
+  END IF;
+END $$;
+
+-- Composite uniqueness so the same job can be tracked separately per user.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_seen_user_job ON seen_jobs (user_id, job_key);
+
+-- New filter columns on rules (broader selection pool + sharper matching).
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS company_sizes JSONB NOT NULL DEFAULT '[]'::jsonb;  -- startup|mid|large
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS freshness TEXT DEFAULT 'any';                       -- 24h|week|month|any
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS seniority JSONB NOT NULL DEFAULT '[]'::jsonb;        -- junior|mid|senior|lead
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS include_keywords TEXT DEFAULT '';
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS exclude_keywords TEXT DEFAULT '';
+ALTER TABLE auto_apply_rules ADD COLUMN IF NOT EXISTS must_have_skills JSONB NOT NULL DEFAULT '[]'::jsonb; -- hard requirement

@@ -38,6 +38,13 @@ export const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internsh
 
 export const WORK_ARRANGEMENTS = ["on-site", "hybrid", "remote"] as const;
 
+export const COMPANY_SIZES = ["startup", "mid", "large"] as const;
+export const SENIORITY_BANDS = ["junior", "mid", "senior", "lead"] as const;
+export const FRESHNESS_OPTIONS = ["any", "24h", "week", "month"] as const;
+export const FRESHNESS_LABELS: Record<string, string> = {
+  any: "Any time", "24h": "Last 24 hours", week: "Last week", month: "Last month",
+};
+
 // Singapore work-pass salary thresholds (monthly, SGD). Illustrative — these
 // rise with age and change over time. Verify against MOM before relying on them.
 export const EP_MIN_SALARY = 5600;

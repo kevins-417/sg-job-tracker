@@ -91,22 +91,30 @@ const applications = [
 
 async function seed() {
   console.log("[seed] clearing existing rows…");
-  await query("TRUNCATE applications, companies, resumes, auto_apply_rules, auto_apply_attempts, search_profiles, seen_jobs RESTART IDENTITY CASCADE");
+  await query("TRUNCATE applications, companies, resumes, auto_apply_rules, auto_apply_attempts, search_profiles, seen_jobs, users RESTART IDENTITY CASCADE");
+
+  console.log("[seed] creating demo users…");
+  const kevinId = uid();
+  const priyaId = uid();
+  await query("INSERT INTO users (id, name, headline) VALUES ($1,$2,$3)", [kevinId, "Kevin", "Senior Product Manager"]);
+  await query("INSERT INTO users (id, name, headline) VALUES ($1,$2,$3)", [priyaId, "Priya", "Product Lead, Fintech"]);
+  // Sample data below belongs to Kevin so the demo shows a populated account;
+  // Priya starts empty to demonstrate per-user separation.
 
   console.log("[seed] inserting companies…");
   for (const c of companies) {
     await query(
-      `INSERT INTO companies (id,name,industry,website,glassdoor,hq,sg_office,employees,notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [c.id, c.name, c.industry, c.website, c.glassdoor, c.hq, c.sg_office, c.employees, c.notes]
+      `INSERT INTO companies (id,name,industry,website,glassdoor,hq,sg_office,employees,notes,user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [c.id, c.name, c.industry, c.website, c.glassdoor, c.hq, c.sg_office, c.employees, c.notes, kevinId]
     );
   }
 
   console.log("[seed] inserting resumes…");
   for (const r of resumes) {
     await query(
-      `INSERT INTO resumes (id,name,version,target_industry) VALUES ($1,$2,$3,$4)`,
-      [r.id, r.name, r.version, r.target_industry]
+      `INSERT INTO resumes (id,name,version,target_industry,user_id) VALUES ($1,$2,$3,$4,$5)`,
+      [r.id, r.name, r.version, r.target_industry, kevinId]
     );
   }
 
@@ -117,16 +125,16 @@ async function seed() {
         id,date_applied,company,title,job_function,industry,portal,
         recruiter_name,recruiter_email,recruiter_phone,salary_min,salary_max,
         location,employment_type,status,job_description,resume_id,
-        next_action_date,timeline,interviews
+        next_action_date,timeline,interviews,user_id
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
-        NULLIF($18,'')::date,$19::jsonb,$20::jsonb
+        NULLIF($18,'')::date,$19::jsonb,$20::jsonb,$21
       )`,
       [
         a.id, a.date_applied, a.company, a.title, a.job_function, a.industry, a.portal,
         a.recruiter_name, a.recruiter_email, a.recruiter_phone, a.salary_min, a.salary_max,
         a.location, a.employment_type, a.status, a.job_description, a.resume_id,
-        a.next_action_date, JSON.stringify(a.timeline), JSON.stringify(a.interviews),
+        a.next_action_date, JSON.stringify(a.timeline), JSON.stringify(a.interviews), kevinId,
       ]
     );
   }
@@ -134,16 +142,19 @@ async function seed() {
   console.log("[seed] inserting search profile + auto-apply rule (disabled example)…");
   const profileId = uid();
   await query(
-    `INSERT INTO search_profiles (id, name, description) VALUES ($1,$2,$3)`,
-    [profileId, "Senior PM — Default", "Senior product roles across tech, finance and government."]
+    `INSERT INTO search_profiles (id, name, description, user_id) VALUES ($1,$2,$3,$4)`,
+    [profileId, "Senior PM — Default", "Senior product roles across tech, finance and government.", kevinId]
   );
   await query(
     `INSERT INTO auto_apply_rules
       (id, label, enabled, keywords, industries, portals, min_salary, resume_id,
        mode, require_review, titles, skills, locations, arrangements,
-       min_experience, cover_template, profile_id, auto_refresh)
+       min_experience, cover_template, profile_id, auto_refresh,
+       company_sizes, freshness, seniority, include_keywords, exclude_keywords,
+       must_have_skills, user_id)
      VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8,$9,$10,
-             $11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16,$17,$18)`,
+             $11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16,$17,$18,
+             $19::jsonb,$20,$21::jsonb,$22,$23,$24::jsonb,$25)`,
     [
       uid(), "Senior PM roles (review first)", false, "product manager, product owner",
       JSON.stringify(["Technology", "Finance & Banking", "Government"]),
@@ -155,6 +166,9 @@ async function seed() {
       JSON.stringify(["hybrid", "remote"]),
       5, "Warm but concise; lead with product outcomes and metrics.",
       profileId, true,
+      JSON.stringify(["large", "mid", "startup"]), "month",
+      JSON.stringify(["senior", "lead"]), "", "intern, junior",
+      JSON.stringify(["product strategy"]), kevinId,
     ]
   );
 

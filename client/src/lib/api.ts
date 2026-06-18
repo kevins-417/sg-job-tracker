@@ -1,16 +1,30 @@
 import type {
   Application, Company, Resume, AutoApplyRule, AutoApplyAttempt, AutoApplyRunResult,
-  SearchProfile, Page,
+  SearchProfile, Page, User,
 } from "./types";
 
 // Empty in dev (Vite proxy forwards /api to :4000). In production set
 // VITE_API_BASE to the deployed API origin, e.g. https://sgjt-api.onrender.com
 const BASE = import.meta.env.VITE_API_BASE ?? "";
 
+// The picked user's id is kept in localStorage and sent on every request so the
+// server can scope data per user. Set via setCurrentUser() after pick-a-name.
+export function getCurrentUserId(): string {
+  try { return localStorage.getItem("sgjt:userId") || ""; } catch { return ""; }
+}
+export function setCurrentUserId(id: string) {
+  try { id ? localStorage.setItem("sgjt:userId", id) : localStorage.removeItem("sgjt:userId"); } catch { /* ignore */ }
+}
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}/api${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-id": getCurrentUserId(),
+    },
     ...init,
+    // ensure our header isn't overwritten by an init.headers without it
+    ...(init?.headers ? { headers: { "Content-Type": "application/json", "x-user-id": getCurrentUserId(), ...init.headers } } : {}),
   });
   if (!res.ok) {
     let detail = "";
@@ -26,6 +40,12 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Users (pick-a-name login)
+  listUsers: () => http<User[]>("/users"),
+  createUser: (name: string, headline: string) =>
+    http<User>("/users", { method: "POST", body: JSON.stringify({ name, headline }) }),
+  deleteUser: (id: string) => http<void>(`/users/${id}`, { method: "DELETE" }),
+
   // Applications
   listApplications: () => http<Application[]>("/applications"),
   createApplication: (body: Application) =>

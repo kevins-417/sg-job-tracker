@@ -70,6 +70,13 @@ export interface SearchProfile {
   createdAt?: string;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  headline: string;
+  createdAt?: string;
+}
+
 export interface AutoApplyRule {
   id: string;
   label: string;
@@ -90,6 +97,13 @@ export interface AutoApplyRule {
   profileId: string;
   lastRunAt: string | null;
   autoRefresh: boolean;
+  // New filters
+  companySizes: string[];     // startup | mid | large
+  freshness: string;          // 24h | week | month | any
+  seniority: string[];        // junior | mid | senior | lead
+  includeKeywords: string;
+  excludeKeywords: string;
+  mustHaveSkills: string[];   // hard requirement
   createdAt?: string;
 }
 

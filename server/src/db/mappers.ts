@@ -82,6 +82,12 @@ export function rowToAutoApplyRule(r: any): AutoApplyRule {
     profileId: r.profile_id ?? "",
     lastRunAt: r.last_run_at?.toISOString?.() ?? r.last_run_at ?? null,
     autoRefresh: r.auto_refresh === undefined ? true : !!r.auto_refresh,
+    companySizes: r.company_sizes ?? [],
+    freshness: r.freshness ?? "any",
+    seniority: r.seniority ?? [],
+    includeKeywords: r.include_keywords ?? "",
+    excludeKeywords: r.exclude_keywords ?? "",
+    mustHaveSkills: r.must_have_skills ?? [],
     createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   };
 }
@@ -113,6 +119,15 @@ export function rowToSearchProfile(r: any): SearchProfile {
     id: r.id,
     name: r.name,
     description: r.description ?? "",
+    createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  };
+}
+
+export function rowToUser(r: any): import("../types.js").User {
+  return {
+    id: r.id,
+    name: r.name,
+    headline: r.headline ?? "",
     createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   };
 }

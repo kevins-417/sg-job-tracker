@@ -6,7 +6,7 @@ import {
 import type {
   AutoApplyRule, AutoApplyAttempt, AutoApplyRunResult, SearchProfile, Page, Palette, Resume,
 } from "../lib/types";
-import { INDUSTRIES, PORTALS, WORK_ARRANGEMENTS, TONE, uid, fmtDate } from "../lib/constants";
+import { INDUSTRIES, PORTALS, WORK_ARRANGEMENTS, COMPANY_SIZES, SENIORITY_BANDS, FRESHNESS_OPTIONS, FRESHNESS_LABELS, TONE, uid, fmtDate } from "../lib/constants";
 import { api } from "../lib/api";
 import {
   Card, CardTitle, SectionHead, Empty, Modal, Field, Input, SelectInput, Chips, Textarea,
@@ -23,7 +23,9 @@ const emptyRule = (profileId: string): AutoApplyRule => ({
   id: uid(), label: "", enabled: false, keywords: "", industries: [], portals: [],
   minSalary: null, resumeId: "", mode: "draft", requireReview: true,
   titles: [], skills: [], locations: [], arrangements: [], minExperience: null,
-  coverTemplate: "", profileId, lastRunAt: null, autoRefresh: true, _new: true,
+  coverTemplate: "", profileId, lastRunAt: null, autoRefresh: true,
+  companySizes: [], freshness: "any", seniority: [], includeKeywords: "",
+  excludeKeywords: "", mustHaveSkills: [], _new: true,
 });
 
 const toList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
@@ -140,7 +142,7 @@ export default function AutoApply({ resumes, C, dark, onDataChanged }: Props) {
     finally { setBusy(null); }
   };
 
-  const toggleIn = (key: "industries" | "portals" | "arrangements", v: string) => {
+  const toggleIn = (key: "industries" | "portals" | "arrangements" | "companySizes" | "seniority", v: string) => {
     if (!editing) return;
     const set = new Set(editing[key]);
     set.has(v) ? set.delete(v) : set.add(v);
@@ -414,6 +416,36 @@ export default function AutoApply({ resumes, C, dark, onDataChanged }: Props) {
             <Field label="Work arrangement" C={C}>
               <Chips options={WORK_ARRANGEMENTS} selected={editing.arrangements} onToggle={(v) => toggleIn("arrangements", v)} C={C} dark={dark} />
             </Field>
+
+            <Field label="Must-have skills (comma-separated — a job is skipped if any are missing)" C={C}>
+              <Input value={fromList(editing.mustHaveSkills)} onChange={(v) => setEditing({ ...editing, mustHaveSkills: toList(v) })} C={C} />
+            </Field>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <Field label="Company size" C={C}>
+                <Chips options={COMPANY_SIZES} selected={editing.companySizes} onToggle={(v) => toggleIn("companySizes", v)} C={C} dark={dark} />
+              </Field>
+              <Field label="Seniority band" C={C}>
+                <Chips options={SENIORITY_BANDS} selected={editing.seniority} onToggle={(v) => toggleIn("seniority", v)} C={C} dark={dark} />
+              </Field>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <Field label="Posting freshness" C={C}>
+                <SelectInput value={editing.freshness} onChange={(v) => setEditing({ ...editing, freshness: v })} options={FRESHNESS_OPTIONS} labels={FRESHNESS_LABELS} C={C} />
+              </Field>
+              <div />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <Field label="Include keywords (comma-separated, bonus)" C={C}>
+                <Input value={editing.includeKeywords} onChange={(v) => setEditing({ ...editing, includeKeywords: v })} C={C} />
+              </Field>
+              <Field label="Exclude keywords (comma-separated — skips matches)" C={C}>
+                <Input value={editing.excludeKeywords} onChange={(v) => setEditing({ ...editing, excludeKeywords: v })} C={C} />
+              </Field>
+            </div>
+
             <Field label="Preferred locations (comma-separated, optional)" C={C}>
               <Input value={fromList(editing.locations)} onChange={(v) => setEditing({ ...editing, locations: toList(v) })} C={C} />
             </Field>
